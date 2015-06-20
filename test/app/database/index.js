@@ -26,7 +26,7 @@ fixtures.save("all", {
     { name: "Jane Doe", gender: "female", _id: doeId }
   ],
   Organization: [
-    {name: "State Government", description: "Representing the good people.", liaisons: [doeId, smithId], _id: govtId}
+    {name: "State Government", description: "Representing the good people.", dateEstablished: new Date("1/1/2000"), liaisons: [doeId, smithId], _id: govtId}
   ],
   School: [
     {name: "City College", description: "Just your average local college.", liaisons: [smithId]},

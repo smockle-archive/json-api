@@ -1,61 +1,72 @@
 import {expect} from "chai";
 import AgentPromise from "../../app/agent";
 
-describe("", (describeDone) => {
-  AgentPromise.then((Agent) => {
-    Agent.request("GET", "/organizations")
-      .accept("application/vnd.api+json")
-      .promise()
-      .then((res) => {
-        describe("Fetching Collection", () => {
-          describe("Status Code", () => {
-            it("should be 200", (done) => {
-              expect(res.status).to.equal(200);
-              done();
-            });
-          });
+describe("Fetching Collection", () => {
+  let res;
 
-          describe("Document Structure", () => {
-            // "A JSON object MUST be at the root of every
-            // JSON API request and response containing data."
-            it("should have an object/document at the top level", (done) => {
-              expect(res.body).to.be.an.object;
-              done();
-            });
+  before(done => {
+    AgentPromise.then(Agent => {
+      return Agent.request("GET", "/organizations")
+        .accept("application/vnd.api+json")
+        .promise();
+    }, done).then(response => {
+      res = response;
+      done();
+    }, done).catch(done);
+  });
 
-            describe("Links", () => {
-              it("should contain a self link to the collection", (done) => {
-                expect(res.body.links).to.be.an.object;
-                expect(res.body.links.self).to.match(/\:\d{1,5}\/organizations/);
-                done();
-              });
-            });
+  describe("Status Code", () => {
+    it("should be 200", (done) => {
+      expect(res.status).to.equal(200);
+      done();
+    });
+  });
 
-            describe("Resource Objects/Primary Data", () => {
-              // "A logical collection of resources MUST be represented as
-              //  an array, even if it only contains one item or is empty."
-              it("should be an array under data", (done) => {
-                expect(res.body.data).to.be.an.array;
-                done();
-              });
+  describe("Document Structure", () => {
+    // "A JSON object MUST be at the root of every
+    // JSON API request and response containing data."
+    it("should have an object/document at the top level", (done) => {
+      expect(res.body).to.be.an.object;
+      done();
+    });
 
-              // "Unless otherwise noted, objects defined by this
-              //  specification MUST NOT contain any additional members."
-              it("should not contain extra members", (done) => {
-                const isAllowedKey = (key) =>
-                  ["type", "id", "attributes", "relationships", "links", "meta"].indexOf(key) !== -1;
+    describe("Links", () => {
+      it("should contain a self link to the collection", (done) => {
+        expect(res.body.links).to.be.an.object;
+        expect(res.body.links.self).to.match(/\:\d{1,5}\/organizations/);
+        done();
+      });
+    });
 
-                if(!Object.keys(res.body.data[0]).every(isAllowedKey)) {
-                  throw new Error("Invalid Key!");
-                }
+    describe("Resource Objects/Primary Data", () => {
+      // "A logical collection of resources MUST be represented as
+      //  an array, even if it only contains one item or is empty."
+      it("should be an array under data", (done) => {
+        expect(res.body.data).to.be.an.array;
+        done();
+      });
 
-                done();
-              });
-            });
-          });
-        });
-        describeDone();
-      }, describeDone).catch(describeDone);
+      // "Unless otherwise noted, objects defined by this
+      //  specification MUST NOT contain any additional members."
+      it("should not contain extra members", (done) => {
+        const isAllowedKey = (key) =>
+          ["type", "id", "attributes", "relationships", "links", "meta"].indexOf(key) !== -1;
+
+        if(!Object.keys(res.body.data[0]).every(isAllowedKey)) {
+          throw new Error("Invalid Key!");
+        }
+
+        done();
+      });
+
+      // Member names SHOULD contain only the characters
+      // "a-z" (U+0061 to U+007A), "0-9" (U+0030 to U+0039),
+      // and the hyphen minus (U+002D HYPHEN-MINUS, "-") as
+      // seperator between multiple words.
+      it("should dasherize member names by default", () => {
+        expect(res.body.data[0].attributes.hasOwnProperty("date-established")).to.be.true;
+      });
+    });
   });
 });
     // "[S]erver implementations MUST ignore
