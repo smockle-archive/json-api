@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import AgentPromise from "../../app/agent";
+import mongoose from "mongoose";
 import {
   ORG_RESOURCE_CLIENT_ID,
   VALID_ORG_RESOURCE_NO_ID_EXTRA_MEMBER,
@@ -13,7 +14,8 @@ describe("", (describeDone) => {
       .send({"data": VALID_ORG_RESOURCE_NO_ID_EXTRA_MEMBER, "extra": false})
       .promise()
       .then((res) => {
-        const createdResource = res.body.data;
+        const createdResource = res.body.data,
+              createdId = res.body.data.id;
 
         describe("Creating a Valid Resource (With an Extra Member)", () => {
           describe("HTTP", () => {
@@ -43,10 +45,19 @@ describe("", (describeDone) => {
               done();
             });
 
+            it("should camelize attributes", (done) => {
+              mongoose.models.Organization.findById(createdId, (err, org) => {
+                console.log(org.dateEstablished);
+                expect(err).to.be.null;
+                expect(org.dateEstablished).to.be.a("date");
+                done();
+              });
+            });
+
             describe("Links", () => {
 
             });
-            
+
             describe("Transforms", () => {
               describe("beforeSave", () => {
                 it("should execute beforeSave hook", (done) => {
