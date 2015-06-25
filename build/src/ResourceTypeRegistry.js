@@ -10,17 +10,25 @@ var _createClass = require("babel-runtime/helpers/create-class")["default"];
 
 var _classCallCheck = require("babel-runtime/helpers/class-call-check")["default"];
 
-var _Object$defineProperty = require("babel-runtime/core-js/object/define-property")["default"];
-
 var _Object$assign = require("babel-runtime/core-js/object/assign")["default"];
 
 var _Object$keys = require("babel-runtime/core-js/object/keys")["default"];
 
-_Object$defineProperty(exports, "__esModule", {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
+var autoGetterSetterProps = ["dbAdapter", "beforeSave", "beforeRender", "labelMappers", "defaultIncludes", "info", "parentType", "behaviors"];
 
-var autoGetterSetterProps = ["dbAdapter", "beforeSave", "beforeRender", "labelMappers", "defaultIncludes", "info", "parentType"];
+/**
+ * Global defaults for resource descriptions, to be merged into defaults
+ * provided to the ResourceTypeRegistry, which are in turn merged into defaults
+ * provided in each resource type descriptionsl
+ */
+var globalResourceDefaults = {
+  behaviors: {
+    dasherizeOutput: { enabled: true }
+  }
+};
 
 /**
  * To fulfill a JSON API request, you often need to know about all the resources
@@ -39,10 +47,12 @@ var ResourceTypeRegistry = (function () {
     var _this = this;
 
     var typeDescriptions = arguments[0] === undefined ? [] : arguments[0];
+    var resourceDefaults = arguments[1] === undefined ? globalResourceDefaults : arguments[1];
 
     _classCallCheck(this, ResourceTypeRegistry);
 
     this._resourceTypes = {};
+    this._resourceDefaults = resourceDefaults;
     typeDescriptions.forEach(function (it) {
       _this.type(it);
     });
@@ -63,6 +73,9 @@ var ResourceTypeRegistry = (function () {
 
       if (description) {
         this._resourceTypes[_type] = {};
+
+        // Merge description defaults into provided description
+        description = _Object$assign({}, this._resourceDefaults, description);
 
         // Set all the properties for the type that the description provides.
         autoGetterSetterProps.concat(["urlTemplates"]).forEach(function (k) {

@@ -1,10 +1,8 @@
 "use strict";
 
-var _Object$defineProperty = require("babel-runtime/core-js/object/define-property")["default"];
-
 var _interopRequireDefault = require("babel-runtime/helpers/interop-require-default")["default"];
 
-_Object$defineProperty(exports, "__esModule", {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
@@ -48,7 +46,7 @@ var _models = {
 
 _nodeMongooseFixtures2["default"].save("all", {
   Person: [{ name: "John Smith", email: "jsmith@gmail.com", gender: "male", _id: smithId }, { name: "Jane Doe", gender: "female", _id: doeId }],
-  Organization: [{ name: "State Government", description: "Representing the good people.", liaisons: [doeId, smithId], _id: govtId }],
+  Organization: [{ name: "State Government", description: "Representing the good people.", dateEstablished: new Date("1/1/2000"), liaisons: [doeId, smithId], _id: govtId }],
   School: [{ name: "City College", description: "Just your average local college.", liaisons: [smithId] }, { name: "State College", description: "Just your average state college." }]
 });
 

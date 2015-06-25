@@ -4,15 +4,13 @@ var _createClass = require("babel-runtime/helpers/create-class")["default"];
 
 var _classCallCheck = require("babel-runtime/helpers/class-call-check")["default"];
 
-var _Object$defineProperty = require("babel-runtime/core-js/object/define-property")["default"];
-
 var _regeneratorRuntime = require("babel-runtime/regenerator")["default"];
 
 var _interopRequireDefault = require("babel-runtime/helpers/interop-require-default")["default"];
 
 var _interopRequireWildcard = require("babel-runtime/helpers/interop-require-wildcard")["default"];
 
-_Object$defineProperty(exports, "__esModule", {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
@@ -144,7 +142,7 @@ var APIController = (function () {
                 break;
               }
 
-              throw new _typesAPIError2["default"](404, undefined, "" + request.type + " is not a valid type.");
+              throw new _typesAPIError2["default"](404, undefined, request.type + " is not a valid type.");
 
             case 9:
               if (!request.hasBody) {

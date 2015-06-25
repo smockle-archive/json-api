@@ -10,59 +10,71 @@ var _appAgent = require("../../app/agent");
 
 var _appAgent2 = _interopRequireDefault(_appAgent);
 
-describe("", function (describeDone) {
-  _appAgent2["default"].then(function (Agent) {
-    Agent.request("GET", "/organizations").accept("application/vnd.api+json").promise().then(function (res) {
-      describe("Fetching Collection", function () {
-        describe("Status Code", function () {
-          it("should be 200", function (done) {
-            (0, _chai.expect)(res.status).to.equal(200);
-            done();
-          });
-        });
+describe("Fetching Collection", function () {
+  var res = undefined;
 
-        describe("Document Structure", function () {
-          // "A JSON object MUST be at the root of every
-          // JSON API request and response containing data."
-          it("should have an object/document at the top level", function (done) {
-            (0, _chai.expect)(res.body).to.be.an.object;
-            done();
-          });
+  before(function (done) {
+    _appAgent2["default"].then(function (Agent) {
+      return Agent.request("GET", "/organizations").accept("application/vnd.api+json").promise();
+    }, done).then(function (response) {
+      res = response;
+      done();
+    }, done)["catch"](done);
+  });
 
-          describe("Links", function () {
-            it("should contain a self link to the collection", function (done) {
-              (0, _chai.expect)(res.body.links).to.be.an.object;
-              (0, _chai.expect)(res.body.links.self).to.match(/\:\d{1,5}\/organizations/);
-              done();
-            });
-          });
+  describe("Status Code", function () {
+    it("should be 200", function (done) {
+      (0, _chai.expect)(res.status).to.equal(200);
+      done();
+    });
+  });
 
-          describe("Resource Objects/Primary Data", function () {
-            // "A logical collection of resources MUST be represented as
-            //  an array, even if it only contains one item or is empty."
-            it("should be an array under data", function (done) {
-              (0, _chai.expect)(res.body.data).to.be.an.array;
-              done();
-            });
+  describe("Document Structure", function () {
+    // "A JSON object MUST be at the root of every
+    // JSON API request and response containing data."
+    it("should have an object/document at the top level", function (done) {
+      (0, _chai.expect)(res.body).to.be.an.object;
+      done();
+    });
 
-            // "Unless otherwise noted, objects defined by this
-            //  specification MUST NOT contain any additional members."
-            it("should not contain extra members", function (done) {
-              var isAllowedKey = function isAllowedKey(key) {
-                return ["type", "id", "attributes", "relationships", "links", "meta"].indexOf(key) !== -1;
-              };
-
-              if (!_Object$keys(res.body.data[0]).every(isAllowedKey)) {
-                throw new Error("Invalid Key!");
-              }
-
-              done();
-            });
-          });
-        });
+    describe("Links", function () {
+      it("should contain a self link to the collection", function (done) {
+        (0, _chai.expect)(res.body.links).to.be.an.object;
+        (0, _chai.expect)(res.body.links.self).to.match(/\:\d{1,5}\/organizations/);
+        done();
       });
-      describeDone();
-    }, describeDone)["catch"](describeDone);
+    });
+
+    describe("Resource Objects/Primary Data", function () {
+      // "A logical collection of resources MUST be represented as
+      //  an array, even if it only contains one item or is empty."
+      it("should be an array under data", function (done) {
+        (0, _chai.expect)(res.body.data).to.be.an.array;
+        done();
+      });
+
+      // "Unless otherwise noted, objects defined by this
+      //  specification MUST NOT contain any additional members."
+      it("should not contain extra members", function (done) {
+        var isAllowedKey = function isAllowedKey(key) {
+          return ["type", "id", "attributes", "relationships", "links", "meta"].indexOf(key) !== -1;
+        };
+
+        if (!_Object$keys(res.body.data[0]).every(isAllowedKey)) {
+          throw new Error("Invalid Key!");
+        }
+
+        done();
+      });
+
+      // Member names SHOULD contain only the characters
+      // "a-z" (U+0061 to U+007A), "0-9" (U+0030 to U+0039),
+      // and the hyphen minus (U+002D HYPHEN-MINUS, "-") as
+      // seperator between multiple words.
+      it("should dasherize member names by default", function () {
+        (0, _chai.expect)(res.body.data[0].attributes.hasOwnProperty("date-established")).to.be["true"];
+      });
+    });
   });
 });
 // "[S]erver implementations MUST ignore

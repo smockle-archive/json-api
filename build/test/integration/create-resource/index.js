@@ -8,12 +8,17 @@ var _appAgent = require("../../app/agent");
 
 var _appAgent2 = _interopRequireDefault(_appAgent);
 
+var _mongoose = require("mongoose");
+
+var _mongoose2 = _interopRequireDefault(_mongoose);
+
 var _fixturesCreation = require("../fixtures/creation");
 
 describe("", function (describeDone) {
   _appAgent2["default"].then(function (Agent) {
     Agent.request("POST", "/organizations").type("application/vnd.api+json").send({ "data": _fixturesCreation.VALID_ORG_RESOURCE_NO_ID_EXTRA_MEMBER, "extra": false }).promise().then(function (res) {
-      var createdResource = res.body.data;
+      var createdResource = res.body.data,
+          createdId = res.body.data.id;
 
       describe("Creating a Valid Resource (With an Extra Member)", function () {
         describe("HTTP", function () {
@@ -43,7 +48,31 @@ describe("", function (describeDone) {
             done();
           });
 
+          it("should camelize attributes", function (done) {
+            _mongoose2["default"].models.Organization.findById(createdId, function (err, org) {
+              (0, _chai.expect)(err).to.be["null"];
+              (0, _chai.expect)(org.dateEstablished).to.be.a("date");
+              done();
+            });
+          });
+
           describe("Links", function () {});
+
+          describe("Transforms", function () {
+            describe("beforeSave", function () {
+              it("should execute beforeSave hook", function (done) {
+                (0, _chai.expect)(createdResource.attributes.description).to.equal("Added a description in beforeSave");
+                done();
+              });
+
+              it("should allow beforeSave to return a Promise", function (done) {
+                Agent.request("POST", "/schools").type("application/vnd.api+json").send({ "data": _fixturesCreation.VALID_SCHOOL_RESOURCE_NO_ID }).promise().then(function (res) {
+                  (0, _chai.expect)(res.body.data.attributes.description).to.equal("Modified in a Promise");
+                  done();
+                }, done)["catch"](done);
+              });
+            });
+          });
 
           describe("The Created Resource", function () {
             it("should return the created resource", function (done) {

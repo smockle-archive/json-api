@@ -2,11 +2,9 @@
 
 var _slicedToArray = require("babel-runtime/helpers/sliced-to-array")["default"];
 
-var _Object$defineProperty = require("babel-runtime/core-js/object/define-property")["default"];
-
 var _interopRequireDefault = require("babel-runtime/helpers/interop-require-default")["default"];
 
-_Object$defineProperty(exports, "__esModule", {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
@@ -15,6 +13,10 @@ var _typesAPIError = require("../../types/APIError");
 var _typesAPIError2 = _interopRequireDefault(_typesAPIError);
 
 var _utilArrays = require("../../util/arrays");
+
+var _utilCamelize = require("../../util/camelize");
+
+var _utilCamelize2 = _interopRequireDefault(_utilCamelize);
 
 exports["default"] = function (requestContext, responseContext, registry) {
   var type = requestContext.type;
@@ -26,11 +28,11 @@ exports["default"] = function (requestContext, responseContext, registry) {
 
   // Handle fields, sorts, includes and filters.
   if (!requestContext.aboutRelationship) {
-    fields = parseFields(requestContext.queryParams.fields);
-    sorts = parseCommaSeparatedParam(requestContext.queryParams.sort);
+    fields = parseFields(requestContext.queryParams.fields, registry);
+    sorts = parseCommaSeparatedParam(requestContext.queryParams.sort, type, registry);
     // just support a "simple" filtering strategy for now.
-    filters = requestContext.queryParams.filter && requestContext.queryParams.filter.simple;
-    includes = parseCommaSeparatedParam(requestContext.queryParams.include);
+    filters = requestContext.queryParams.filter && transformFilters(requestContext.queryParams.filter.simple, type, registry);
+    includes = parseCommaSeparatedParam(requestContext.queryParams.include, type, registry);
 
     if (!includes) {
       includes = registry.defaultIncludes(type);
@@ -65,7 +67,7 @@ exports["default"] = function (requestContext, responseContext, registry) {
 
       if (!relationship) {
         var title = "Invalid relationship name.";
-        var detail = "" + requestContext.relationship + " is not a valid " + ("relationship name on resources of type '" + type + "'");
+        var detail = requestContext.relationship + " is not a valid " + ("relationship name on resources of type '" + type + "'");
 
         throw new _typesAPIError2["default"](404, undefined, title, detail);
       }
@@ -75,7 +77,7 @@ exports["default"] = function (requestContext, responseContext, registry) {
   }
 };
 
-function parseFields(fieldsParam) {
+function parseFields(fieldsParam, registry) {
   var fields = undefined;
   if (typeof fieldsParam === "object") {
     fields = {};
@@ -84,14 +86,50 @@ function parseFields(fieldsParam) {
     };
 
     for (var type in fieldsParam) {
-      var provided = parseCommaSeparatedParam(fieldsParam[type]) || [];
+      var provided = parseCommaSeparatedParam(fieldsParam[type], type, registry) || [];
       fields[type] = provided.filter(isField);
     }
   }
   return fields;
 }
 
-function parseCommaSeparatedParam(it) {
-  return it ? it.split(",").map(decodeURIComponent) : undefined;
+function parseCommaSeparatedParam(it, type, registry) {
+  return it ? it.split(",").map(function (f) {
+    return transformDotSeparatedPath(f, type, registry);
+  }) : undefined;
+}
+
+function transformDotSeparatedPath(it, type, registry) {
+  var parts = it.split(".");
+  var types = [type];
+  parts.forEach(function (p, index) {
+    if (index < parts.length - 1) {
+      types.push(registry.dbAdapter(types[index]).constructor.getReferencedType(types[index], p));
+    }
+  });
+
+  return parts.map(function (part, index) {
+    if (shouldCamelizeType(types[index], registry)) {
+      return (0, _utilCamelize2["default"])(decodeURIComponent(part));
+    }
+    return decodeURIComponent(part);
+  }).join(".");
+}
+
+function transformFilters(it, type, registry) {
+  if (shouldCamelizeType(type, registry)) {
+    for (var key in it) {
+      var camelizedKey = (0, _utilCamelize2["default"])(key);
+      if (camelizedKey !== key) {
+        it[camelizedKey] = it[key];
+        delete it[key];
+      }
+    }
+  }
+  return it;
+}
+
+function shouldCamelizeType(type, registry) {
+  return registry.behaviors(type).dasherizeOutput.enabled;
 }
 module.exports = exports["default"];

@@ -1,17 +1,15 @@
 "use strict";
 
-var _Object$defineProperty = require("babel-runtime/core-js/object/define-property")["default"];
-
 var _Object$assign = require("babel-runtime/core-js/object/assign")["default"];
 
-_Object$defineProperty(exports, "__esModule", {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
 var VALID_ORG_RESOURCE_NO_ID = {
   "type": "organizations",
   "attributes": {
-    "name": "Test Organization"
+    "name": "Test Organization",
+    "date-established": "2015-06-22T10:52:53-07:00"
   },
   "relationships": {
     "liaisons": {
@@ -25,4 +23,12 @@ var VALID_ORG_RESOURCE_NO_ID_EXTRA_MEMBER = _Object$assign({ "extraMember": true
 
 exports.VALID_ORG_RESOURCE_NO_ID_EXTRA_MEMBER = VALID_ORG_RESOURCE_NO_ID_EXTRA_MEMBER;
 var ORG_RESOURCE_CLIENT_ID = _Object$assign({ "id": "53f54dd98d1e62ff12539db3" }, VALID_ORG_RESOURCE_NO_ID);
+
 exports.ORG_RESOURCE_CLIENT_ID = ORG_RESOURCE_CLIENT_ID;
+var VALID_SCHOOL_RESOURCE_NO_ID = {
+  "type": "schools",
+  "attributes": {
+    "name": "Test School"
+  }
+};
+exports.VALID_SCHOOL_RESOURCE_NO_ID = VALID_SCHOOL_RESOURCE_NO_ID;
