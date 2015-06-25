@@ -32,6 +32,10 @@ var _typesCollection = require("../types/Collection");
 
 var _typesCollection2 = _interopRequireDefault(_typesCollection);
 
+var _typesResource = require("../types/Resource");
+
+var _typesResource2 = _interopRequireDefault(_typesResource);
+
 var _typesAPIError = require("../types/APIError");
 
 var _typesAPIError2 = _interopRequireDefault(_typesAPIError);
@@ -67,6 +71,10 @@ var _stepsPreQueryValidateResources2 = _interopRequireDefault(_stepsPreQueryVali
 var _stepsApplyTransform = require("../steps/apply-transform");
 
 var _stepsApplyTransform2 = _interopRequireDefault(_stepsApplyTransform);
+
+var _stepsFormatJson = require("../steps/format-json");
+
+var formatters = _interopRequireWildcard(_stepsFormatJson);
 
 var _stepsDoQueryDoGet = require("../steps/do-query/do-get");
 
@@ -140,7 +148,7 @@ var APIController = (function () {
 
             case 9:
               if (!request.hasBody) {
-                context$3$0.next = 21;
+                context$3$0.next = 24;
                 break;
               }
 
@@ -168,18 +176,25 @@ var APIController = (function () {
 
             case 20:
 
-              request.primary = (0, _stepsApplyTransform2["default"])(parsedPrimary, "beforeSave", registry, frameworkReq, frameworkRes);
+              // Camelize incoming request
+              parsedPrimary = formatters.camelizeResourceOrCollection(parsedPrimary, registry);
 
-            case 21:
+              context$3$0.next = 23;
+              return (0, _stepsApplyTransform2["default"])(parsedPrimary, "beforeSave", registry, frameworkReq, frameworkRes);
+
+            case 23:
+              request.primary = context$3$0.sent;
+
+            case 24:
               if (!(request.idOrIds && request.allowLabel)) {
-                context$3$0.next = 28;
+                context$3$0.next = 31;
                 break;
               }
 
-              context$3$0.next = 24;
+              context$3$0.next = 27;
               return (0, _stepsPreQueryLabelToIds2["default"])(request.type, request.idOrIds, registry, frameworkReq);
 
-            case 24:
+            case 27:
               mappedLabel = context$3$0.sent;
 
               // set the idOrIds on the request context
@@ -191,47 +206,47 @@ var APIController = (function () {
                 response.primary = mappedLabel ? new _typesCollection2["default"]() : null;
               }
 
-            case 28:
+            case 31:
               if (!(typeof response.primary === "undefined")) {
-                context$3$0.next = 43;
+                context$3$0.next = 46;
                 break;
               }
 
               context$3$0.t0 = request.method;
-              context$3$0.next = context$3$0.t0 === "get" ? 32 : context$3$0.t0 === "post" ? 35 : context$3$0.t0 === "patch" ? 38 : context$3$0.t0 === "delete" ? 41 : 43;
+              context$3$0.next = context$3$0.t0 === "get" ? 35 : context$3$0.t0 === "post" ? 38 : context$3$0.t0 === "patch" ? 41 : context$3$0.t0 === "delete" ? 44 : 46;
               break;
-
-            case 32:
-              context$3$0.next = 34;
-              return (0, _stepsDoQueryDoGet2["default"])(request, response, registry);
-
-            case 34:
-              return context$3$0.abrupt("break", 43);
 
             case 35:
               context$3$0.next = 37;
-              return (0, _stepsDoQueryDoPost2["default"])(request, response, registry);
+              return (0, _stepsDoQueryDoGet2["default"])(request, response, registry);
 
             case 37:
-              return context$3$0.abrupt("break", 43);
+              return context$3$0.abrupt("break", 46);
 
             case 38:
               context$3$0.next = 40;
-              return (0, _stepsDoQueryDoPatch2["default"])(request, response, registry);
+              return (0, _stepsDoQueryDoPost2["default"])(request, response, registry);
 
             case 40:
-              return context$3$0.abrupt("break", 43);
+              return context$3$0.abrupt("break", 46);
 
             case 41:
               context$3$0.next = 43;
-              return (0, _stepsDoQueryDoDelete2["default"])(request, response, registry);
+              return (0, _stepsDoQueryDoPatch2["default"])(request, response, registry);
 
             case 43:
-              context$3$0.next = 51;
+              return context$3$0.abrupt("break", 46);
+
+            case 44:
+              context$3$0.next = 46;
+              return (0, _stepsDoQueryDoDelete2["default"])(request, response, registry);
+
+            case 46:
+              context$3$0.next = 54;
               break;
 
-            case 45:
-              context$3$0.prev = 45;
+            case 48:
+              context$3$0.prev = 48;
               context$3$0.t1 = context$3$0["catch"](0);
               errorsArr = Array.isArray(context$3$0.t1) ? context$3$0.t1 : [context$3$0.t1];
               apiErrors = errorsArr.map(_typesAPIError2["default"].fromError);
@@ -247,9 +262,9 @@ var APIController = (function () {
               response.errors = response.errors.concat(apiErrors);
               //console.log("API CONTROLLER ERRORS", errorsArr[0], errorsArr[0].stack);
 
-            case 51:
+            case 54:
               if (!response.errors.length) {
-                context$3$0.next = 55;
+                context$3$0.next = 58;
                 break;
               }
 
@@ -259,12 +274,23 @@ var APIController = (function () {
               response.body = new _typesDocument2["default"](response.errors).get(true);
               return context$3$0.abrupt("return", response);
 
-            case 55:
+            case 58:
+              context$3$0.next = 60;
+              return (0, _stepsApplyTransform2["default"])(response.primary, "beforeRender", registry, frameworkReq, frameworkRes);
 
-              // apply transforms pre-send
-              response.primary = (0, _stepsApplyTransform2["default"])(response.primary, "beforeRender", registry, frameworkReq, frameworkRes);
+            case 60:
+              response.primary = context$3$0.sent;
+              context$3$0.next = 63;
+              return (0, _stepsApplyTransform2["default"])(response.included, "beforeRender", registry, frameworkReq, frameworkRes);
 
-              response.included = (0, _stepsApplyTransform2["default"])(response.included, "beforeRender", registry, frameworkReq, frameworkRes);
+            case 63:
+              response.included = context$3$0.sent;
+
+              // Dasherize ougoing response
+              // (DELETE responses don't have primary data)
+              if (response.primary) {
+                response.primary = formatters.dasherizeResourceOrCollection(response.primary, registry);
+              }
 
               if (response.status !== 204) {
                 response.body = new _typesDocument2["default"](response.primary, response.included, undefined, registry.urlTemplates(), request.uri).get(true);
@@ -272,11 +298,11 @@ var APIController = (function () {
 
               return context$3$0.abrupt("return", response);
 
-            case 59:
+            case 67:
             case "end":
               return context$3$0.stop();
           }
-        }, callee$2$0, this, [[0, 45]]);
+        }, callee$2$0, this, [[0, 48]]);
       }));
     }
   }], [{
@@ -343,3 +369,5 @@ module.exports = exports["default"];
 
 // If we have errors, which could have come from prior steps not just
 // throwing, return here and don't bother with transforms.
+
+// apply transforms pre-send
