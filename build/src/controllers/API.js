@@ -164,19 +164,18 @@ var APIController = (function () {
             case 16:
               parsedPrimary = context$3$0.sent;
 
-              if (request.aboutRelationship) {
-                context$3$0.next = 20;
-                break;
-              }
-
-              context$3$0.next = 20;
-              return (0, _stepsPreQueryValidateResources2["default"])(request.type, parsedPrimary, registry);
-
-            case 20:
-
               // Camelize incoming request
               parsedPrimary = formatters.camelizeResourceOrCollection(parsedPrimary, registry);
 
+              if (request.aboutRelationship) {
+                context$3$0.next = 21;
+                break;
+              }
+
+              context$3$0.next = 21;
+              return (0, _stepsPreQueryValidateResources2["default"])(request.type, parsedPrimary, registry);
+
+            case 21:
               context$3$0.next = 23;
               return (0, _stepsApplyTransform2["default"])(parsedPrimary, "beforeSave", registry, frameworkReq, frameworkRes);
 
@@ -348,7 +347,6 @@ module.exports = exports["default"];
 // If the type requested in the endpoint hasn't been registered, we 404.
 
 // If the request has a body, validate it and parse its resources.
-
 // validate the request's resources.
 
 // Map label to idOrIds, if applicable.
