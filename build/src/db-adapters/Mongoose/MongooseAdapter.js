@@ -6,6 +6,8 @@ var _classCallCheck = require("babel-runtime/helpers/class-call-check")["default
 
 var _defineProperty = require("babel-runtime/helpers/define-property")["default"];
 
+var _slicedToArray = require("babel-runtime/helpers/sliced-to-array")["default"];
+
 var _Object$keys = require("babel-runtime/core-js/object/keys")["default"];
 
 var _Object$assign = require("babel-runtime/core-js/object/assign")["default"];
@@ -81,40 +83,35 @@ var MongooseAdapter = (function () {
     this.idGenerator = idGenerator;
   }
 
+  /**
+   * Returns a Promise for an array of two items: the primary resources (either
+   * a single Resource or a Collection) and the included resources, as an array.
+   *
+   * Note: The correct behavior if idOrIds is an empty array is to return no
+   * documents, as happens below. If it's undefined, though, we're not filtering
+   * by id and should return all documents.
+   */
+
   _createClass(MongooseAdapter, [{
     key: "find",
-
-    /**
-     * Returns a Promise for an array of two items: the primary resources (either
-     * a single Resource or a Collection) and the included resources, as an array.
-     *
-     * Note: The correct behavior if idOrIds is an empty array is to return no
-     * documents, as happens below. If it's undefined, though, we're not filtering
-     * by id and should return all documents.
-     */
     value: function find(type, idOrIds, fields, sorts, filters, includePaths) {
       var _this = this;
 
       var model = this.getModel(this.constructor.getModelName(type));
       var queryBuilder = new _mongoose2["default"].Query(null, null, model, model.collection);
+
+      var _constructor$getIdQueryType = this.constructor.getIdQueryType(idOrIds);
+
+      var _constructor$getIdQueryType2 = _slicedToArray(_constructor$getIdQueryType, 2);
+
+      var mode = _constructor$getIdQueryType2[0];
+      var idQuery = _constructor$getIdQueryType2[1];
+
       var pluralizer = this.inflector.plural;
-      var mode = "find",
-          idQuery = undefined;
       var primaryDocumentsPromise = undefined,
           includedResourcesPromise = (0, _q2["default"])(null);
 
-      if (idOrIds) {
-        if (typeof idOrIds === "string") {
-          mode = "findOne";
-          idQuery = idOrIds;
-        } else {
-          idQuery = { "$in": idOrIds };
-        }
-
-        queryBuilder[mode]({ "_id": idQuery });
-      } else {
-        queryBuilder.find();
-      }
+      queryBuilder[mode](idQuery);
 
       // do sorting
       if (Array.isArray(sorts)) {
@@ -208,8 +205,6 @@ var MongooseAdapter = (function () {
         return _this.constructor.docsToResourceOrCollection(it, makeCollection, pluralizer, fields);
       }), includedResourcesPromise])["catch"](util.errorHandler);
     }
-  }, {
-    key: "create",
 
     /**
      * Returns a Promise that fulfills with the created Resource. The Promise
@@ -220,6 +215,8 @@ var MongooseAdapter = (function () {
      * @param {(Resource|Collection)} resourceOrCollection - The resource or
      *   collection of resources to create.
      */
+  }, {
+    key: "create",
     value: function create(parentType, resourceOrCollection) {
       var _this2 = this;
 
@@ -253,8 +250,6 @@ var MongooseAdapter = (function () {
         return _this2.constructor.docsToResourceOrCollection(finalDocs, makeCollection, _this2.inflector.plural);
       })["catch"](util.errorHandler);
     }
-  }, {
-    key: "update",
 
     /**
      * @param {string} parentType - All the resources to be created must be this
@@ -262,6 +257,8 @@ var MongooseAdapter = (function () {
      * @param {Object} resourceOrCollection - The changed Resource or Collection
      *   of resources. Should only have the fields that are changed.
      */
+  }, {
+    key: "update",
     value: function update(parentType, resourceOrCollection) {
       var _this3 = this;
 
@@ -278,16 +275,21 @@ var MongooseAdapter = (function () {
       // Set up some data structures based on resourcesOrCollection
       var resourceTypes = [];
       var changeSets = {};
+
       var idOrIds = (0, _utilTypeHandling.mapResources)(resourceOrCollection, function (it) {
         changeSets[it.id] = it;
         resourceTypes.push(it.type);
         return it.id;
       });
 
-      var mode = typeof idOrIds === "string" ? "findOne" : "find";
-      var idQuery = typeof idOrIds === "string" ? idOrIds : { "$in": idOrIds };
+      var _constructor$getIdQueryType3 = this.constructor.getIdQueryType(idOrIds);
 
-      return (0, _q2["default"])(model[mode]({ "_id": idQuery }).exec()).then(function (docs) {
+      var _constructor$getIdQueryType32 = _slicedToArray(_constructor$getIdQueryType3, 2);
+
+      var mode = _constructor$getIdQueryType32[0];
+      var idQuery = _constructor$getIdQueryType32[1];
+
+      return (0, _q2["default"])(model[mode](idQuery).exec()).then(function (docs) {
         var successfulSavesPromises = [];
 
         // if some ids were invalid/deleted/not found, we can't let *any* update
@@ -354,29 +356,28 @@ var MongooseAdapter = (function () {
     key: "delete",
     value: function _delete(parentType, idOrIds) {
       var model = this.getModel(this.constructor.getModelName(parentType));
-      var mode = "find",
-          idQuery = undefined;
+
+      var _constructor$getIdQueryType4 = this.constructor.getIdQueryType(idOrIds);
+
+      var _constructor$getIdQueryType42 = _slicedToArray(_constructor$getIdQueryType4, 2);
+
+      var mode = _constructor$getIdQueryType42[0];
+      var idQuery = _constructor$getIdQueryType42[1];
 
       if (!idOrIds) {
         return _q2["default"].Promise(function (resolve, reject) {
           reject(new _typesAPIError2["default"](400, undefined, "You must specify some resources to delete"));
         });
-      } else if (typeof idOrIds === "string") {
-        mode = "findOne";
-        idQuery = idOrIds;
-      } else {
-        idQuery = { "$in": idOrIds };
       }
 
-      return (0, _q2["default"])(model[mode]({ "_id": idQuery }).exec()).then(function (docs) {
+      return (0, _q2["default"])(model[mode](idQuery).exec()).then(function (docs) {
+        if (!docs) throw new _typesAPIError2["default"](404, undefined, "No matching resource found.");
         (0, _utilTypeHandling.forEachArrayOrVal)(docs, function (it) {
           it.remove();
         });
         return docs;
       })["catch"](util.errorHandler);
     }
-  }, {
-    key: "addToRelationship",
 
     /**
      * Unlike update(), which would do full replacement of a to-many relationship
@@ -385,6 +386,8 @@ var MongooseAdapter = (function () {
      * run. But validation and the update query hooks will work if you're using
      * Mongoose 4.0.
      */
+  }, {
+    key: "addToRelationship",
     value: function addToRelationship(type, id, relationshipPath, newLinkage) {
       var model = this.getModel(this.constructor.getModelName(type));
       var update = {
@@ -412,6 +415,13 @@ var MongooseAdapter = (function () {
   }, {
     key: "getModel",
     value: function getModel(modelName) {
+      if (!this.models[modelName]) {
+        // don't use an APIError here, since we don't want to
+        // show this internals-specific method to the user.
+        var err = new Error("The model \"" + modelName + "\" has not been registered with the MongooseAdapter.");
+        err.status = 404;
+        throw err;
+      }
       return this.models[modelName];
     }
   }, {
@@ -420,20 +430,18 @@ var MongooseAdapter = (function () {
       var parentModel = this.getModel(this.constructor.getModelName(parentType, this.inflector.singular));
       return [parentType].concat(this.constructor.getChildTypes(parentModel, this.inflector.plural));
     }
-  }, {
-    key: "getRelationshipNames",
 
     /**
      * Return the paths that, for the provided type, must always must be filled
      * with relationship info, if they're present. Occassionally, a path might be
      * optionally fillable w/ relationship info; this shouldn't return those paths.
      */
+  }, {
+    key: "getRelationshipNames",
     value: function getRelationshipNames(type) {
       var model = this.getModel(this.constructor.getModelName(type, this.inflector.singular));
       return util.getReferencePaths(model);
     }
-  }], [{
-    key: "docsToResourceOrCollection",
 
     /**
      * We want to always return a collection when the user is asking for something
@@ -450,6 +458,8 @@ var MongooseAdapter = (function () {
      * @param makeCollection Whether we're making a collection.
      * @param pluralizer An inflector function for setting the Resource's type
      */
+  }], [{
+    key: "docsToResourceOrCollection",
     value: function docsToResourceOrCollection(docs, makeCollection, pluralizer, fields) {
       var _this4 = this;
 
@@ -465,10 +475,10 @@ var MongooseAdapter = (function () {
       });
       return makeCollection ? new _typesCollection2["default"](docs) : docs[0];
     }
-  }, {
-    key: "docToResource",
 
     // Useful to have this as static for calling as a utility outside this class.
+  }, {
+    key: "docToResource",
     value: function docToResource(doc, pluralizer, fields) {
       var _this5 = this;
 
@@ -568,7 +578,7 @@ var MongooseAdapter = (function () {
   }, {
     key: "getModelName",
     value: function getModelName(type) {
-      var singularizer = arguments[1] === undefined ? _pluralize2["default"].singular : arguments[1];
+      var singularizer = arguments.length <= 1 || arguments[1] === undefined ? _pluralize2["default"].singular : arguments[1];
 
       var words = type.split("-");
       words[words.length - 1] = singularizer(words[words.length - 1]);
@@ -576,19 +586,19 @@ var MongooseAdapter = (function () {
         return it.charAt(0).toUpperCase() + it.slice(1);
       }).join("");
     }
-  }, {
-    key: "getType",
 
     // Get the json api type name for a model.
+  }, {
+    key: "getType",
     value: function getType(modelName) {
-      var pluralizer = arguments[1] === undefined ? _pluralize2["default"].plural : arguments[1];
+      var pluralizer = arguments.length <= 1 || arguments[1] === undefined ? _pluralize2["default"].plural : arguments[1];
 
-      return pluralizer(modelName.replace(/([A-Z])/g, "-$1").slice(1).toLowerCase());
+      return pluralizer(modelName.replace(/([A-Z])/g, "\-$1").slice(1).toLowerCase());
     }
   }, {
     key: "getReferencedType",
     value: function getReferencedType(model, path) {
-      var pluralizer = arguments[2] === undefined ? _pluralize2["default"].plural : arguments[2];
+      var pluralizer = arguments.length <= 2 || arguments[2] === undefined ? _pluralize2["default"].plural : arguments[2];
 
       return this.getType(util.getReferencedModelName(model, path), pluralizer);
     }
@@ -597,7 +607,7 @@ var MongooseAdapter = (function () {
     value: function getChildTypes(model) {
       var _this6 = this;
 
-      var pluralizer = arguments[1] === undefined ? _pluralize2["default"].plural : arguments[1];
+      var pluralizer = arguments.length <= 1 || arguments[1] === undefined ? _pluralize2["default"].plural : arguments[1];
 
       if (!model.discriminators) return [];
 
@@ -610,7 +620,7 @@ var MongooseAdapter = (function () {
     value: function getStandardizedSchema(model) {
       var _this7 = this;
 
-      var pluralizer = arguments[1] === undefined ? _pluralize2["default"].plural : arguments[1];
+      var pluralizer = arguments.length <= 1 || arguments[1] === undefined ? _pluralize2["default"].plural : arguments[1];
 
       var schemaOptions = model.schema.options;
       var versionKey = schemaOptions.versionKey;
@@ -699,6 +709,33 @@ var MongooseAdapter = (function () {
       }
 
       return words.join(" ");
+    }
+  }, {
+    key: "getIdQueryType",
+    value: function getIdQueryType(idOrIds) {
+      var mode = typeof idOrIds === "string" ? "findOne" : "find";
+      var idQuery = undefined;
+
+      if (typeof idOrIds === "string") {
+        if (!this.idIsValid(idOrIds)) {
+          throw new _typesAPIError2["default"](404, undefined, "No matching resource found.", "Invalid ID.");
+        }
+
+        idQuery = { _id: idOrIds };
+      } else if (Array.isArray(idOrIds)) {
+        if (!idOrIds.every(this.idIsValid)) {
+          throw new _typesAPIError2["default"](400, undefined, "Invalid ID.");
+        }
+
+        idQuery = { _id: { "$in": idOrIds } };
+      }
+
+      return [mode, idQuery];
+    }
+  }, {
+    key: "idIsValid",
+    value: function idIsValid(id) {
+      return typeof id === "string" && /^[0-9a-fA-F]{24}$/.test(id);
     }
   }]);
 

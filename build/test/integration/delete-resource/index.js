@@ -8,32 +8,28 @@ var _appAgent = require("../../app/agent");
 
 var _appAgent2 = _interopRequireDefault(_appAgent);
 
-var _mongoose = require("mongoose");
-
-var _mongoose2 = _interopRequireDefault(_mongoose);
+var _fixturesCreation = require("../fixtures/creation");
 
 describe("Deleting a resource", function () {
 
-  var id = undefined;
+  var Agent = undefined,
+      id = undefined;
   before(function (done) {
-    _appAgent2["default"].then(function (Agent) {
-      _mongoose2["default"].models.Organization.create({ name: "Delete me" }, function (err, model) {
-        if (err) {
-          done(err);
-        }
-        id = model._id;
-        Agent.request("DEL", "/organizations/" + id).type("application/vnd.api+json").send().promise().then(function () {
-          return done();
-        }, done)["catch"](done);
-      });
-    });
+    _appAgent2["default"].then(function (A) {
+      Agent = A;
+      return Agent.request("POST", "/schools").type("application/vnd.api+json").send({ "data": _fixturesCreation.VALID_SCHOOL_RESOURCE_NO_ID }).promise().then(function (response) {
+        id = response.body.data.id;
+        return Agent.request("DEL", "/schools/" + id).type("application/vnd.api+json").send().promise();
+      }, done).then(function () {
+        return done();
+      }, done);
+    }, done)["catch"](done);
   });
 
   it("should delete a resource by id", function (done) {
-    _mongoose2["default"].models.Organization.findById(id, function (err, model) {
-      (0, _chai.expect)(err).to.be["null"];
-      (0, _chai.expect)(model).to.be["null"];
+    Agent.request("GET", "/schools/" + id).accept("application/vnd.api+json").promise().then(done, function (err) {
+      (0, _chai.expect)(err.response.statusCode).to.equal(404);
       done();
-    });
+    })["catch"](done);
   });
 });

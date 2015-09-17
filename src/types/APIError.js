@@ -41,29 +41,33 @@ export default class APIError extends Error {
   /**
    * Creates a JSON-API Compliant Error Object from a JS Error object
    *
-   * Note: the spec allows error objects to have arbitrary properties
-   * beyond the ones for which it defines a meaning (ie. id, href, code,
-   * status, path, etc.), but this function strips out all such properties
-   * in order to offer a neater result (as JS error objects often contain
-   * all kinds of crap).
    */
   static fromError(err) {
+    const fallbackTitle = "An unknown error occurred while trying to process this request.";
+    const ErrorConstructor = this || APIError; // in case this isn't bound.
+
     if(err instanceof APIError) {
       return err;
     }
 
-    const title = err.title
-      || (it.isJSONAPIDisplayReady && err.message)
-      || "An unknown error occurred while trying to process this request.";
+    // If the error is marked as ready for JSON API display, it's secure
+    // to read values off it and show them to the user. (Note: most of
+    // the args below will probably be null/undefined, but that's fine.)
+    else if(err.isJSONAPIDisplayReady) {
+      return new ErrorConstructor(
+        err.status || err.statusCode || 500,
+        err.code,
+        err.title || fallbackTitle,
+        err.details || (err.message ? err.message : undefined),
+        err.links,
+        err.paths
+      );
+    }
 
-    // most of the args below will probably be null/undefined, but that's fine.
-    return new APIError(
-      err.status || err.statusCode || 500,
-      err.code,
-      title,
-      err.message || err.details,
-      err.links,
-      err.paths
-    );
+    // Otherwise, we just show a generic error message.
+    else {
+      return new ErrorConstructor(500, undefined, fallbackTitle);
+    }
+
   }
 }

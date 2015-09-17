@@ -1,5 +1,19 @@
+# 2.9 -> 2.10 Breaking Changes  (Not Semver until 3.0)
+- [Very subtle changes](https://github.com/ethanresnick/json-api/commit/19e16edfb58ee2b5f2573a9e2d1d09cb73d05050) to how the request body is parsed and stored on the request object. You almost certainly don’t need to care about these changes.
+# v2.8 -> 2.9 Breaking Changes (Not Semver until 3.0)
+- APIController.responseFromExternalError() has a changed API
+- Errors caused in the Express handler while building the Request object are now
+  sent in a JSON API-compliant format. Before, only the status was sent or, in
+  some cases, the app hung/crashed. See https://github.com/ethanresnick/json-api/issues/61
+
+# v2.7 -> 2.8 Breaking Changes (Not Semver until 3.0)
+- Babel's polyfills are no longer loaded globally, so, if you were relying on them, you'll need to re-include them yourself. See http://babeljs.io/docs/usage/polyfill/
+
+# v2.6 -> 2.7 Breaking Changes (Not Semver until 3.0)
+- Some error objects in 4xx and 5xx responses may be different, as we now expose fewer error details by default (for security reasons). See [the relevant commit](https://github.com/ethanresnick/json-api/commit/f1477c78aa58a1e7d2cb1ffc7922e0e050f4d1df) for more information.
+
 # v2.5 -> 2.6 Breaking Changes (Not Semver until 3.0)
-- In relationship objects, `self` and `related` links now properly show up under the links key. Closes #36.
+- In relationship objects, `self` and `related` links now properly show up under the `links` key. Closes [#36](https://github.com/ethanresnick/json-api/issues/36).
 
 # v2.4 -> 2.5 Breaking Changes (Not Semver until 3.0)
 - The `location` property on the `Response` class is now at

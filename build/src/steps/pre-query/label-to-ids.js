@@ -19,14 +19,14 @@ exports["default"] = function (type, labelOrId, registry, frameworkReq) {
 
     // reolve with the mapped label
     if (typeof labelMapper === "function") {
-      (0, _q2["default"])(labelMapper(model, frameworkReq)).then(resolve);
+      (0, _q2["default"])(labelMapper(model, frameworkReq)).then(resolve, reject);
     }
 
     // or, if we couldn't find a label mapper, that means
     // we were given an id, so we just resolve with that id.
     else {
-      resolve(labelOrId);
-    }
+        resolve(labelOrId);
+      }
   });
 };
 

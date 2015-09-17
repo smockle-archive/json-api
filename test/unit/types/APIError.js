@@ -15,11 +15,23 @@ describe("Error Objects", () => {
   });
 
   describe("the fromError helper", () => {
-    it("should use the error's statusCode val as status if status not defined", () => {
-      let er = APIError.fromError({"statusCode": 300});
+    it("should pass APIError instances through as is", () => {
+      let error = new APIError();
+      expect(APIError.fromError(error)).to.equal(error);
+    });
+
+    it("should use the error's statusCode val as status iff status not defined", () => {
+      let er = APIError.fromError({
+        "statusCode": 300,
+        "isJSONAPIDisplayReady": true
+      });
       expect(er.status === "300").to.be.true;
 
-      er = APIError.fromError({"status": 200, "statusCode": 300});
+      er = APIError.fromError({
+        "status": 200,
+        "statusCode": 300,
+        "isJSONAPIDisplayReady": true
+      });
       expect(er.status === "200").to.be.true;
     });
 

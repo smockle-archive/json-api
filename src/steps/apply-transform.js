@@ -14,9 +14,9 @@ export default function(toTransform, mode, registry, frameworkReq, frameworkRes)
     // below, allow the user to return undefined to remove a vlaue.
     return Promise.all(toTransform.resources.map((it) =>
       transform(it, frameworkReq, frameworkRes, mode, registry)
-    ).filter((it) => it !== undefined)).then((newResources) => {
-      return new Collection(newResources);
-    });
+    )).then((transformed) =>
+      new Collection(transformed.filter((it) => it !== undefined))
+    );
   }
 
   // We only transform resources or collections.
@@ -33,7 +33,7 @@ function transform(resource, req, res, transformMode, registry) {
   // is no parentType or the parentType doesn't define an appropriate
   // transformer. Otherwise, it'll return the result of calling
   // the parentType's transformer with the provided arguments.
-  let superFn = (resource, req, res) => {
+  let superFn = (resource, req, res) => { // eslint-disable-line no-shadow
     let parentType = registry.parentType(resource.type);
 
     if(!parentType || !registry[transformMode](parentType)) {

@@ -32,6 +32,10 @@ var _controllersAPI = require("../controllers/API");
 
 var _controllersAPI2 = _interopRequireDefault(_controllersAPI);
 
+var _typesAPIError = require("../types/APIError");
+
+var _typesAPIError2 = _interopRequireDefault(_typesAPIError);
+
 var _typesHTTPRequest = require("../types/HTTP/Request");
 
 var _typesHTTPRequest2 = _interopRequireDefault(_typesHTTPRequest);
@@ -68,40 +72,42 @@ var ExpressStrategy = (function () {
 
     this.api = apiController;
     this.docs = docsController;
-    this.config = _Object$assign(defaultOptions, options); // apply options
+    this.config = _Object$assign({}, defaultOptions, options); // apply options
   }
+
+  // For requests like GET /:type, GET /:type/:id/:relationship,
+  // POST /:type PATCH /:type/:id, PATCH /:type, DELETE /:type/:idOrLabel,
+  // DELETE /:type, GET /:type/:id/links/:relationship,
+  // PATCH /:type/:id/links/:relationship, POST /:type/:id/links/:relationship,
+  // and DELETE /:type/:id/links/:relationship.
 
   _createClass(ExpressStrategy, [{
     key: "apiRequest",
-
-    // For requests like GET /:type, GET /:type/:id/:relationship,
-    // POST /:type PATCH /:type/:id, PATCH /:type, DELETE /:type/:idOrLabel,
-    // DELETE /:type, GET /:type/:id/links/:relationship,
-    // PATCH /:type/:id/links/:relationship, POST /:type/:id/links/:relationship,
-    // and DELETE /:type/:id/links/:relationship.
     value: function apiRequest(req, res, next) {
       var _this = this;
 
       buildRequestObject(req, this.config.tunnel).then(function (requestObject) {
-        _this.api.handle(requestObject, req, res).then(function (responseObject) {
+        return _this.api.handle(requestObject, req, res).then(function (responseObject) {
           _this.sendResources(responseObject, res, next);
         });
-      }, function (err) {
-        res.status(err.status).send(err.message);
-      }).done();
+      })["catch"](function (err) {
+        _this.sendError(err, req, res);
+      });
     }
-  }, {
-    key: "docsRequest",
 
     // For requests for the documentation.
+  }, {
+    key: "docsRequest",
     value: function docsRequest(req, res, next) {
       var _this2 = this;
 
       buildRequestObject(req, this.config.tunnel).then(function (requestObject) {
-        _this2.docs.handle(requestObject).then(function (responseObject) {
+        return _this2.docs.handle(requestObject).then(function (responseObject) {
           _this2.sendResources(responseObject, res, next);
         });
-      }).done();
+      })["catch"](function (err) {
+        _this2.sendError(err, req, res);
+      });
     }
   }, {
     key: "sendResources",
@@ -111,7 +117,11 @@ var ExpressStrategy = (function () {
       }
 
       if (!responseObject.contentType) {
-        this.config.handleContentNegotiation ? res.status(406).send() : next();
+        if (this.config.handleContentNegotiation) {
+          res.status(406).send();
+        } else {
+          next();
+        }
       } else {
         res.set("Content-Type", responseObject.contentType);
         res.status(responseObject.status || 200);
@@ -127,32 +137,36 @@ var ExpressStrategy = (function () {
         }
       }
     }
-  }, {
-    key: "sendError",
 
     /**
      * A user of this library may wish to send an error response for an exception
      * that originated outside of the JSON API Pipeline and that's outside the
      * main spec's scope (e.g. an authentication error). So, the controller
      * exposes this method which allows them to do that.
+     *
+     * @param {Error|APIError|Error[]|APIError[]} errors Error or array of errors
+     * @param {Object} req Express's request object
+     * @param {Object} res Express's response object
      */
-    value: function sendError(error, req, res) {
+  }, {
+    key: "sendError",
+    value: function sendError(errors, req, res) {
       var _this3 = this;
 
-      buildRequestObject(req).then(function (requestObject) {
-        _controllersAPI2["default"].responseFromExternalError(requestObject, error, _this3.api.registry).then(function (responseObject) {
-          return _this3.sendResources(responseObject, res, function () {});
-        });
+      _controllersAPI2["default"].responseFromExternalError(errors, req.headers.accept).then(function (responseObject) {
+        return _this3.sendResources(responseObject, res, function () {});
+      })["catch"](function (err) {
+        // if we hit an error generating our error...
+        res.status(err.status).send(err.message);
       });
     }
-  }, {
-    key: "toApp",
 
     /**
      * @TODO Uses this ExpressStrategy to create an express app with
      * preconfigured routes that can be mounted as a subapp.
-     */
-    value: function toApp(typesToExcludedMethods) {}
+    toApp(typesToExcludedMethods) {
+    }
+    */
   }]);
 
   return ExpressStrategy;
@@ -179,16 +193,18 @@ function buildRequestObject(req, allowTunneling) {
 
     // Support Verb tunneling, but only for PATCH and only if user turns it on.
     // Turning on any tunneling automatically could be a security issue.
-    var requestedMethod = (req.headers["X-HTTP-Method-Override"] || "").toLowerCase();
+    var requestedMethod = (req.headers["x-http-method-override"] || "").toLowerCase();
     if (allowTunneling && it.method === "post" && requestedMethod === "patch") {
       it.method = "patch";
     } else if (requestedMethod) {
-      reject(new Error("Cannot tunnel to the method \"" + requestedMethod + "\"."));
+      reject(new _typesAPIError2["default"](400, undefined, "Cannot tunnel to the method \"" + requestedMethod.toUpperCase() + "\"."));
     }
 
-    it.hasBody = hasBody(req);
+    if (hasBody(req)) {
+      if (!isReadableStream(req)) {
+        return reject(new _typesAPIError2["default"](500, undefined, "Request body could not be parsed. Make sure other no other middleware has already parsed the request body."));
+      }
 
-    if (it.hasBody) {
       it.contentType = req.headers["content-type"];
       var typeParsed = _contentType2["default"].parse(req);
 
@@ -199,22 +215,34 @@ function buildRequestObject(req, allowTunneling) {
         bodyParserOptions.length = req.headers["content-length"];
       }
 
+      // The req has not yet been read, so let's read it
       (0, _rawBody2["default"])(req, bodyParserOptions, function (err, string) {
         if (err) {
           reject(err);
-        } else {
-          try {
-            it.body = JSON.parse(string);
-            resolve(it);
-          } catch (error) {
-            var parseErr = new Error("Request contains invalid JSON.");
-            parseErr.status = error.statusCode = 400;
-            reject(err);
-          }
         }
+
+        // Even though we passed the hasBody check, the body could still be
+        // empty, so we check the length. (We can't check this before doing
+        // getRawBody because, while Content-Length: 0 signals an empty body,
+        // there's no similar in-advance clue for detecting empty bodies when
+        // Transfer-Encoding: chunked is being used.)
+        else if (string.length === 0) {
+            it.hasBody = false;
+            it.body = "";
+            resolve(it);
+          } else {
+            try {
+              it.hasBody = true;
+              it.body = JSON.parse(string);
+              resolve(it);
+            } catch (error) {
+              reject(new _typesAPIError2["default"](400, undefined, "Request contains invalid JSON."));
+            }
+          }
       });
     } else {
-      it.body = null;
+      it.hasBody = false;
+      it.body = undefined;
       resolve(it);
     }
   });
@@ -222,5 +250,9 @@ function buildRequestObject(req, allowTunneling) {
 
 function hasBody(req) {
   return req.headers["transfer-encoding"] !== undefined || !isNaN(req.headers["content-length"]);
+}
+
+function isReadableStream(req) {
+  return typeof req._readableState === "object" && req._readableState.endEmitted === false;
 }
 module.exports = exports["default"];

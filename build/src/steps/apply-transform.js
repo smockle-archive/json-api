@@ -27,17 +27,17 @@ exports["default"] = function (toTransform, mode, registry, frameworkReq, framew
     // below, allow the user to return undefined to remove a vlaue.
     return _q.Promise.all(toTransform.resources.map(function (it) {
       return transform(it, frameworkReq, frameworkRes, mode, registry);
-    }).filter(function (it) {
-      return it !== undefined;
-    })).then(function (newResources) {
-      return new _typesCollection2["default"](newResources);
+    })).then(function (transformed) {
+      return new _typesCollection2["default"](transformed.filter(function (it) {
+        return it !== undefined;
+      }));
     });
   }
 
   // We only transform resources or collections.
   else {
-    return _q.Promise.resolve(toTransform);
-  }
+      return _q.Promise.resolve(toTransform);
+    }
 };
 
 function transform(resource, req, res, transformMode, registry) {
@@ -49,6 +49,7 @@ function transform(resource, req, res, transformMode, registry) {
   // transformer. Otherwise, it'll return the result of calling
   // the parentType's transformer with the provided arguments.
   var superFn = function superFn(resource, req, res) {
+    // eslint-disable-line no-shadow
     var parentType = registry.parentType(resource.type);
 
     if (!parentType || !registry[transformMode](parentType)) {

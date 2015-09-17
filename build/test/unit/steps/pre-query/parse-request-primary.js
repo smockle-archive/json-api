@@ -32,7 +32,9 @@ describe("Resource Parser", function () {
   describe.skip("Parsing Linkage", function () {
     it.skip("should read in the incoming json correctly", function () {});
 
-    it.skip("should reject invalid linkage", function () {});
+    it.skip("should reject invalid linkage", function () {
+      //linkage who's value is true, or {"id": ""}
+    });
   });
 
   describe("Parsing a Collection", function () {
@@ -91,5 +93,3 @@ describe("Resource Parser", function () {
     });
   });
 });
-
-//linkage who's value is true, or {"id": ""}

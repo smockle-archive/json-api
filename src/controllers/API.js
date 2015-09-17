@@ -25,6 +25,15 @@ import doDELETE from "../steps/do-query/do-delete";
 
 let supportedExt = [];
 
+// We have to globally patch Promise for co to work, even though global patches
+// are suboptimal. See https://github.com/ethanresnick/json-api/issues/47
+// We use eval so that the runtime transformer doesn't replace our check for an
+// existing Promise with an invocation of the polyfill.
+/*eslint-disable no-eval */
+GLOBAL.Promise = eval("typeof Promise !== 'undefined' ? Promise : undefined") ||
+  require("babel-runtime/core-js/promise").default;
+/*eslint-enable no-eval */
+
 class APIController {
   constructor(registry) {
     this.registry = registry;
@@ -47,6 +56,9 @@ class APIController {
     // Kick off the chain for generating the response.
     return co(function*() {
       try {
+        // check that a valid method is in use
+        yield requestValidators.checkMethod(request);
+
         // throw if the body is supposed to be present but isn't (or vice-versa).
         yield requestValidators.checkBodyExistence(request);
 
@@ -184,13 +196,26 @@ class APIController {
     });
   }
 
-  static responseFromExternalError(request, error) {
+  /**
+   * Builds a response from errors. Allows errors that occur outside of the
+   * library to be handled and returned in JSON API-compiant fashion.
+   *
+   * @param {Error|APIError|Error[]|APIError[]} errors Error or array of errors
+   * @param {string} requestAccepts Request's Accepts header
+   */
+  static responseFromExternalError(errors, requestAccepts) {
     let response = new Response();
-    response.errors = [APIError.fromError(error)];
+
+    // Convert to array
+    response.errors = Array.isArray(errors) ? errors : [errors];
+
+    // Convert Errors to APIErrors
+    response.errors = response.errors.map(APIError.fromError.bind(APIError));
+
     response.status = pickStatus(response.errors.map((v) => Number(v.status)));
     response.body = new Document(response.errors).get(true);
 
-    return negotiateContentType(request.accepts, ["application/vnd.api+json"])
+    return negotiateContentType(requestAccepts, ["application/vnd.api+json"])
       .then((contentType) => {
         response.contentType = (contentType.toLowerCase() === "application/json")
           ? contentType : "application/vnd.api+json";

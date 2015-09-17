@@ -2,8 +2,8 @@ import chai from "chai";
 import ResourceTypeRegistry from "../../src/ResourceTypeRegistry";
 
 let expect = chai.expect;
-let registry = {};
 let makeGetterSetterTest = function(newThing, type, methodName, deep) {
+  let registry = new ResourceTypeRegistry();
   return function() {
     expect(registry[methodName](type)).to.be.undefined;
     registry[methodName](type, newThing);
@@ -20,57 +20,81 @@ let makeGetterSetterTest = function(newThing, type, methodName, deep) {
 };
 
 describe("ResourceTypeRegistry", function() {
-  beforeEach(() => {
-    registry = new ResourceTypeRegistry();
-  });
-
   describe("constructor", () => {
     it("should register resource descriptions provided in first parameter", () => {
-      registry = new ResourceTypeRegistry([{
+      let registry = new ResourceTypeRegistry([{
         type: "someType",
         info: "provided to constructor"
       }]);
       expect(registry.type("someType")).to.be.an.object;
       expect(registry.type("someType").info).to.equal("provided to constructor");
     });
-
-    it("should save the second paramter as _resourceDefaults property", () => {
-      let defaults = { info: "provided to defaults" };
-      registry = new ResourceTypeRegistry([], defaults);
-      expect(registry._resourceDefaults).to.equal(defaults);
-    });
   });
 
   describe("type", () => {
-    let description = {
-      dbAdapter: {},
-      beforeSave: () => {},
-      beforeRender: () => {},
-      behaviors: { dasherizeOutput: { enabled: true } },
-      info: {},
-      urlTemplates: {"path": "test template"}
-    };
-
-    it("should be a getter/setter for a type",
-      makeGetterSetterTest(description, "mytypes", "type", true)
-    );
-
     it("should merge descriptionDefaults into resource description", () => {
-      registry = new ResourceTypeRegistry([], {
+      let registry = new ResourceTypeRegistry([], {
         info: "provided as default"
       });
 
       registry.type("someType", {});
       expect(registry.type("someType").info).to.equal("provided as default");
+      expect(registry.type("someType").behaviors).to.be.an("object");
     });
 
     it("should give the description precedence over the provided default", () => {
-      registry = new ResourceTypeRegistry([], {
+      let registry = new ResourceTypeRegistry([], {
         info: "provided as default"
       });
 
-      registry.type("someType", { info: "overriding the default" });
-      expect(registry.type("someType").info).to.equal("overriding the default");
+      let someType = {
+        info: "overriding the default",
+        beforeSave: () => {},
+        beforeRender: () => {},
+        urlTemplates: {"path": "test template"}
+      };
+
+      registry.type("someType", someType);
+      let output = registry.type("someType");
+
+      expect(output.info).to.equal(someType.info);
+      expect(output.beforeSave).to.equal(someType.beforeSave);
+      expect(output.beforeRender).to.equal(someType.beforeRender);
+      expect(output.urlTemplates).to.deep.equal(someType.urlTemplates);
+    });
+
+    it("should give description and resource defaults precedence over global defaults", () => {
+      let registry = new ResourceTypeRegistry([{
+        "type": "testType",
+        "behaviors": {
+          "dasherizeOutput": {
+            "enabled": true
+          }
+        }
+      }, {
+        "type": "testType2"
+      }], {
+        "behaviors": {
+          "dasherizeOutput": {"enabled": false, "exceptions": []}
+        }
+      });
+
+      let testTypeOutput = registry.type("testType");
+      let testType2Output = registry.type("testType2");
+
+      expect(testTypeOutput.behaviors.dasherizeOutput.enabled).to.be.true;
+      expect(testType2Output.behaviors.dasherizeOutput.enabled).to.be.false;
+      expect(testTypeOutput.behaviors.dasherizeOutput.exceptions).to.deep.equal([]);
+    });
+  });
+
+  describe("behaviors", () => {
+    it("should merge in provided behaviors config", () => {
+      let registry = new ResourceTypeRegistry();
+      registry.behaviors("testType", {"dasherizeOutput": {exceptions: {}}});
+
+      // the global default shouldn't have been replaced over by the set above.
+      expect(registry.behaviors("testType").dasherizeOutput.enabled).to.be.true;
     });
   });
 
