@@ -305,6 +305,9 @@ var APIController = (function () {
               if (response.primary) {
                 response.primary = formatters.dasherizeResourceOrCollection(response.primary, registry);
               }
+              if (response.included) {
+                response.included = formatters.dasherizeResourceOrCollection(response.included, registry);
+              }
 
               if (response.status !== 204) {
                 response.body = new _typesDocument2["default"](response.primary, response.included, undefined, registry.urlTemplates(), request.uri).get(true);

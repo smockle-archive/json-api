@@ -184,6 +184,9 @@ class APIController {
       if (response.primary) {
         response.primary = formatters.dasherizeResourceOrCollection(response.primary, registry);
       }
+      if (response.included) {
+        response.included = formatters.dasherizeResourceOrCollection(response.included, registry);
+      }
 
       if(response.status !== 204) {
         response.body = new Document(
